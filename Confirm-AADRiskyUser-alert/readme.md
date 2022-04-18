@@ -1,12 +1,12 @@
 # Confirm-AADRiskyUser
 
-This playbook will set the Risky User property in AAD using Graph API.
+This playbook will set the Risky User property in AAD using Graph API. [link to raw](#https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Playbooks/Confirm-AADRiskyUser/alert-trigger/azuredeploy.json)
 
 You will need to add the managed identity that is created by the Logic App to the Security Administrator role in Azure AD.
 
 
 
-[link to raw](#https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Playbooks/Confirm-AADRiskyUser/alert-trigger/azuredeploy.json)
+
 
 
 
