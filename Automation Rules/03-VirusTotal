@@ -1,0 +1,6 @@
+All VirusTotal Playbooks:
+
+Get-DomainReport
+Get-FileReport
+Get-IPReport
+Get-URLReport

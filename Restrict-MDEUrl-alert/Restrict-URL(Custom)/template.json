@@ -1,0 +1,220 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "workflows_5QC_Restrict_MDEUrl_name": {
+            "defaultValue": "5QC.Restrict-MDEUrl",
+            "type": "String"
+        },
+        "connections_azuresentinel_externalid": {
+            "defaultValue": "/subscriptions/a1a21640-263b-45e1-9ad1-be5b4e1eb6ad/resourceGroups/5Q-RG-Playbooks/providers/Microsoft.Web/connections/azuresentinel",
+            "type": "String"
+        }
+    },
+    "variables": {},
+    "resources": [
+        {
+            "type": "Microsoft.Logic/workflows",
+            "apiVersion": "2017-07-01",
+            "name": "[parameters('workflows_5QC_Restrict_MDEUrl_name')]",
+            "location": "eastus",
+            "tags": {
+                "LogicAppsCategory": "security",
+                "hidden-SentinelTemplateName": "Restrict-MDEUrl_alert",
+                "hidden-SentinelTemplateVersion": "1.0"
+            },
+            "identity": {
+                "type": "SystemAssigned"
+            },
+            "properties": {
+                "state": "Enabled",
+                "definition": {
+                    "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+                    "contentVersion": "1.0.0.0",
+                    "parameters": {
+                        "$connections": {
+                            "defaultValue": {},
+                            "type": "Object"
+                        }
+                    },
+                    "triggers": {
+                        "When_a_response_to_an_Azure_Sentinel_alert_is_triggered": {
+                            "type": "ApiConnectionWebhook",
+                            "inputs": {
+                                "body": {
+                                    "callback_url": "@{listCallbackUrl()}"
+                                },
+                                "host": {
+                                    "connection": {
+                                        "name": "@parameters('$connections')['azuresentinel']['connectionId']"
+                                    }
+                                },
+                                "path": "/subscribe"
+                            }
+                        }
+                    },
+                    "actions": {
+                        "Alert_-_Get_incident": {
+                            "runAfter": {},
+                            "type": "ApiConnection",
+                            "inputs": {
+                                "host": {
+                                    "connection": {
+                                        "name": "@parameters('$connections')['azuresentinel']['connectionId']"
+                                    }
+                                },
+                                "method": "get",
+                                "path": "/Incidents/subscriptions/@{encodeURIComponent(triggerBody()?['WorkspaceSubscriptionId'])}/resourceGroups/@{encodeURIComponent(triggerBody()?['WorkspaceResourceGroup'])}/workspaces/@{encodeURIComponent(triggerBody()?['WorkspaceId'])}/alerts/@{encodeURIComponent(triggerBody()?['SystemAlertId'])}"
+                            }
+                        },
+                        "Entities_-_Get_URLs": {
+                            "runAfter": {
+                                "Alert_-_Get_incident": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "ApiConnection",
+                            "inputs": {
+                                "body": "@triggerBody()?['Entities']",
+                                "host": {
+                                    "connection": {
+                                        "name": "@parameters('$connections')['azuresentinel']['connectionId']"
+                                    }
+                                },
+                                "method": "post",
+                                "path": "/entities/url"
+                            }
+                        },
+                        "For_each": {
+                            "foreach": "@body('Entities_-_Get_URLs')?['URLs']",
+                            "actions": {
+                                "Add_comment_to_incident_(V3)": {
+                                    "runAfter": {
+                                        "HTTP": [
+                                            "Succeeded"
+                                        ]
+                                    },
+                                    "type": "ApiConnection",
+                                    "inputs": {
+                                        "body": {
+                                            "incidentArmId": "@body('Alert_-_Get_incident')?['id']",
+                                            "message": "<p>@{items('For_each')?['Url']} was added to MDE Indicators with action: AlertandBlock via playbook.</p>"
+                                        },
+                                        "host": {
+                                            "connection": {
+                                                "name": "@parameters('$connections')['azuresentinel']['connectionId']"
+                                            }
+                                        },
+                                        "method": "post",
+                                        "path": "/Incidents/Comment"
+                                    }
+                                },
+                                "Condition": {
+                                    "actions": {
+                                        "Set_URL": {
+                                            "runAfter": {},
+                                            "type": "SetVariable",
+                                            "inputs": {
+                                                "name": "URL item",
+                                                "value": "https://@{items('For_each')?['Url']}"
+                                            }
+                                        }
+                                    },
+                                    "runAfter": {},
+                                    "else": {
+                                        "actions": {
+                                            "Set_URL_2": {
+                                                "runAfter": {},
+                                                "type": "SetVariable",
+                                                "inputs": {
+                                                    "name": "URL item",
+                                                    "value": "@items('For_each')?['Url']"
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "expression": {
+                                        "and": [
+                                            {
+                                                "not": {
+                                                    "startsWith": [
+                                                        "@items('For_each')?['Url']",
+                                                        "https://"
+                                                    ]
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    "type": "If"
+                                },
+                                "HTTP": {
+                                    "runAfter": {
+                                        "Condition": [
+                                            "Succeeded"
+                                        ]
+                                    },
+                                    "type": "Http",
+                                    "inputs": {
+                                        "authentication": {
+                                            "audience": "https://api.securitycenter.windows.com",
+                                            "type": "ManagedServiceIdentity"
+                                        },
+                                        "body": {
+                                            "action": "AlertAndBlock",
+                                            "application": "Azure Sentinel",
+                                            "description": "@{body('Alert_-_Get_incident')?['properties']?['incidentNumber']}-@{body('Alert_-_Get_incident')?['properties']?['title']}",
+                                            "expirationTime": "@{formatDateTime(addDays(string(triggerbody()['TimeGenerated']), 90), 'yyyy-MM-ddTHH:mm:ssZ')}",
+                                            "indicatorType": "Url",
+                                            "indicatorValue": "@{variables('URL item')}",
+                                            "severity": "@{body('Alert_-_Get_incident')?['properties']?['severity']}",
+                                            "title": "@{guid()}"
+                                        },
+                                        "headers": {
+                                            "Content-type": "application/json"
+                                        },
+                                        "method": "POST",
+                                        "uri": "https://api.securitycenter.windows.com/api/indicators"
+                                    }
+                                }
+                            },
+                            "runAfter": {
+                                "Initialize_variable": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "Foreach"
+                        },
+                        "Initialize_variable": {
+                            "runAfter": {
+                                "Entities_-_Get_URLs": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "InitializeVariable",
+                            "inputs": {
+                                "variables": [
+                                    {
+                                        "name": "URL item",
+                                        "type": "string"
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    "outputs": {}
+                },
+                "parameters": {
+                    "$connections": {
+                        "value": {
+                            "azuresentinel": {
+                                "connectionId": "[parameters('connections_azuresentinel_externalid')]",
+                                "connectionName": "azuresentinel",
+                                "id": "/subscriptions/a1a21640-263b-45e1-9ad1-be5b4e1eb6ad/providers/Microsoft.Web/locations/eastus/managedApis/azuresentinel"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    ]
+}

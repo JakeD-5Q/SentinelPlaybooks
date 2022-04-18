@@ -1,0 +1,176 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "workflows_5QC_Post_Message_Teams_name": {
+            "defaultValue": "5QC.Post-Message-Teams",
+            "type": "String"
+        },
+        "connections_azuresentinel_externalid": {
+            "defaultValue": "/subscriptions/a1a21640-263b-45e1-9ad1-be5b4e1eb6ad/resourceGroups/RG-5Q-Sentinel/providers/Microsoft.Web/connections/azuresentinel",
+            "type": "String"
+        },
+        "connections_office365_4_externalid": {
+            "defaultValue": "/subscriptions/a1a21640-263b-45e1-9ad1-be5b4e1eb6ad/resourceGroups/RG-5Q-Sentinel/providers/Microsoft.Web/connections/office365-4",
+            "type": "String"
+        },
+        "connections_teams_3_externalid": {
+            "defaultValue": "/subscriptions/a1a21640-263b-45e1-9ad1-be5b4e1eb6ad/resourceGroups/RG-5Q-Sentinel/providers/Microsoft.Web/connections/teams-3",
+            "type": "String"
+        }
+    },
+    "variables": {},
+    "resources": [
+        {
+            "type": "Microsoft.Logic/workflows",
+            "apiVersion": "2017-07-01",
+            "name": "[parameters('workflows_5QC_Post_Message_Teams_name')]",
+            "location": "centralus",
+            "tags": {
+                "LogicAppsCategory": "security"
+            },
+            "identity": {
+                "type": "SystemAssigned"
+            },
+            "properties": {
+                "state": "Enabled",
+                "definition": {
+                    "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+                    "contentVersion": "1.0.0.0",
+                    "parameters": {
+                        "$connections": {
+                            "defaultValue": {},
+                            "type": "Object"
+                        }
+                    },
+                    "triggers": {
+                        "When_a_response_to_an_Azure_Sentinel_alert_is_triggered": {
+                            "type": "ApiConnectionWebhook",
+                            "inputs": {
+                                "body": {
+                                    "callback_url": "@{listCallbackUrl()}"
+                                },
+                                "host": {
+                                    "connection": {
+                                        "name": "@parameters('$connections')['azuresentinel_1']['connectionId']"
+                                    }
+                                },
+                                "path": "/subscribe"
+                            }
+                        }
+                    },
+                    "actions": {
+                        "Alert_-_Get_incident": {
+                            "runAfter": {},
+                            "type": "ApiConnection",
+                            "inputs": {
+                                "host": {
+                                    "connection": {
+                                        "name": "@parameters('$connections')['azuresentinel_1']['connectionId']"
+                                    }
+                                },
+                                "method": "get",
+                                "path": "/Cases/@{encodeURIComponent(triggerBody()?['SystemAlertId'])}/@{encodeURIComponent(triggerBody()?['WorkspaceSubscriptionId'])}/@{encodeURIComponent(triggerBody()?['WorkspaceId'])}/@{encodeURIComponent(triggerBody()?['WorkspaceResourceGroup'])}"
+                            }
+                        },
+                        "Compose": {
+                            "runAfter": {
+                                "Alert_-_Get_incident": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "Compose",
+                            "inputs": "@body('Alert_-_Get_incident')?['properties']"
+                        },
+                        "Compose_message_(Incident_details)": {
+                            "runAfter": {
+                                "Make_subject": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "Compose",
+                            "inputs": "Severity of Alert: @{triggerBody()?['Severity']}\n\nAzure Sentinel Alert;\nTItle: @{body('Alert_-_Get_incident')?['properties']?['Title']}\nStatus: @{body('Alert_-_Get_incident')?['properties']?['Status']}\nNumber: @{body('Alert_-_Get_incident')?['properties']?['CaseNumber']}\nCreated Time (UTC): @{body('Alert_-_Get_incident')?['properties']?['CreatedTimeUtc']}\n\nAlert Details:\nAlert Display Name: @{triggerBody()?['AlertDisplayName']}\nAlert Type: @{triggerBody()?['AlertType']}\nSubscription ID: @{triggerBody()?['WorkspaceSubscriptionId']}\nProvider Alert ID: @{triggerBody()?['ProviderAlertId']}\nExtneded Links: @{triggerBody()?['ExtendedLinks']}"
+                        },
+                        "Make_subject": {
+                            "runAfter": {
+                                "Compose": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "Compose",
+                            "inputs": "Incident Escalation: @{body('Alert_-_Get_incident')?['properties']?['CaseNumber']} - @{body('Alert_-_Get_incident')?['properties']?['Title']}"
+                        },
+                        "Post_a_message_(V3)": {
+                            "runAfter": {
+                                "Compose_message_(Incident_details)": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "ApiConnection",
+                            "inputs": {
+                                "body": {
+                                    "body": {
+                                        "content": "<p>@{outputs('Compose_message_(Incident_details)')}</p>",
+                                        "contentType": "html"
+                                    },
+                                    "subject": "@{outputs('Make_subject')}"
+                                },
+                                "host": {
+                                    "connection": {
+                                        "name": "@parameters('$connections')['teams_2']['connectionId']"
+                                    }
+                                },
+                                "method": "post",
+                                "path": "/v3/beta/teams/@{encodeURIComponent('31b9af4e-30d6-4bce-826d-7723dffda48e')}/channels/@{encodeURIComponent('19:uU2zRE967CCX8eKQ_wKycoxtVblakmA324RLWSLBtes1@thread.tacv2')}/messages"
+                            }
+                        },
+                        "Send_an_email_(V2)": {
+                            "runAfter": {
+                                "Compose_message_(Incident_details)": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "ApiConnection",
+                            "inputs": {
+                                "body": {
+                                    "Body": "<p>@{outputs('Compose_message_(Incident_details)')}</p>",
+                                    "Subject": "@{outputs('Make_subject')}",
+                                    "To": "jake.derkowski@5qcloud.com"
+                                },
+                                "host": {
+                                    "connection": {
+                                        "name": "@parameters('$connections')['office365']['connectionId']"
+                                    }
+                                },
+                                "method": "post",
+                                "path": "/v2/Mail"
+                            }
+                        }
+                    },
+                    "outputs": {}
+                },
+                "parameters": {
+                    "$connections": {
+                        "value": {
+                            "azuresentinel_1": {
+                                "connectionId": "[parameters('connections_azuresentinel_externalid')]",
+                                "connectionName": "azuresentinel",
+                                "id": "/subscriptions/a1a21640-263b-45e1-9ad1-be5b4e1eb6ad/providers/Microsoft.Web/locations/centralus/managedApis/azuresentinel"
+                            },
+                            "office365": {
+                                "connectionId": "[parameters('connections_office365_4_externalid')]",
+                                "connectionName": "office365-4",
+                                "id": "/subscriptions/a1a21640-263b-45e1-9ad1-be5b4e1eb6ad/providers/Microsoft.Web/locations/centralus/managedApis/office365"
+                            },
+                            "teams_2": {
+                                "connectionId": "[parameters('connections_teams_3_externalid')]",
+                                "connectionName": "teams-3",
+                                "id": "/subscriptions/a1a21640-263b-45e1-9ad1-be5b4e1eb6ad/providers/Microsoft.Web/locations/centralus/managedApis/teams"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    ]
+}

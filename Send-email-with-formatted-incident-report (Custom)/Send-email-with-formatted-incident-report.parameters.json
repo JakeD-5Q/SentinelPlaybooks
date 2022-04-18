@@ -1,0 +1,18 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "workflows_5QC_Send_email_with_formatted_incident_report_name": {
+            "value": null
+        },
+        "connections_azuresentinel_5QC_Send_email_with_formatted_incident_report_externalid": {
+            "value": null
+        },
+        "connections_office365_6_externalid": {
+            "value": null
+        },
+        "connections_sharepointonline_2_externalid": {
+            "value": null
+        }
+    }
+}
