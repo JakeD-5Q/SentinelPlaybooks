@@ -1,0 +1,21 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "PlaybookName": {
+            "value": "5QC.Watchlist-Add-IPToMaliciousIPList"
+        },
+        "AzureSentinelWorkspaceName": {
+            "value": "5Q-LogAnalytics-Sentinel"
+        },
+        "AzureSentinelResourceGroup": {
+            "value": "rg-5q-sentinel"
+        },
+        "SubscriptionID": {
+            "value": "a1a21640-263b-45e1-9ad1-be5b4e1eb6ad"
+        },
+        "WatchlistName": {
+            "value": "MaliciousIPList"
+        }
+    }
+}

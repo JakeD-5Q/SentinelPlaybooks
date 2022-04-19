@@ -1,0 +1,21 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "PlaybookName": {
+            "value": "Watchlist-Add-IPToWatchList"
+        },
+        "AzureSentinelWorkspaceName": {
+            "value": "The Azure Sentinel workspace name"
+        },
+        "AzureSentinelResourceGroup": {
+            "value": "The AzureSentinel resource group"
+        },
+        "SubscriptionID": {
+            "value": "The Azure Sentinel subscription ID"
+        },
+        "WatchlistName": {
+            "value": "Name of watchlist"
+        }
+    }
+}
