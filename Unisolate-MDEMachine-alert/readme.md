@@ -3,13 +3,11 @@
 This playbook will release a machine from isolation in Microsoft Defender for Endpoint.
 
 
-[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure%2FAzure-Sentinel%2Fmaster%2FPlaybooks%2FUnisolate-MDEMachine%2Falert-trigger%2Fazuredeploy.json)
-
-[link to raw](#https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Playbooks/Unisolate-MDEMachine/alert-trigger/azuredeploy.json)
 
 ## Prerequisites
 
 - You will need to grant Machine.Isolate permissions to the managed identity.  Run the following code replacing the managed identity object id.  You find the managed identity object id on the Identity blade under Settings for the Logic App.
+
 ```powershell
 $MIGuid = "<Enter your managed identity guid here>"
 $MI = Get-AzureADServicePrincipal -ObjectId $MIGuid
@@ -22,3 +20,7 @@ $AppRole = $MDEServicePrincipal.AppRoles | Where-Object {$_.Value -eq $Permissio
 New-AzureAdServiceAppRoleAssignment -ObjectId $MI.ObjectId -PrincipalId $MI.ObjectId `
 -ResourceId $MDEServicePrincipal.ObjectId -Id $AppRole.Id
 ```
+
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure%2FAzure-Sentinel%2Fmaster%2FPlaybooks%2FUnisolate-MDEMachine%2Falert-trigger%2Fazuredeploy.json)
+
+[link to raw](https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Playbooks/Unisolate-MDEMachine/alert-trigger/azuredeploy.json)

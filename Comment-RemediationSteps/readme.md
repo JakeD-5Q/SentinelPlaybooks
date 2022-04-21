@@ -1,6 +1,6 @@
 # Comment-RemediationSteps
 
-[link to raw](#https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Playbooks/Comment-RemediationSteps/azuredeploy_incident.json)
+[link to raw](https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Playbooks/Comment-RemediationSteps/azuredeploy_incident.json)
 
 
 This playbook will provide analysts with guidance to properly respond to an incident. This will add a comment to a Sentinel Incident with the remediation steps for alerts related to Microsoft Defender for Endpoint and Azure Security Center / Azure Defender. With these steps users will be able to respond to threats and prevent similar suspicious activity from occurring in the future.

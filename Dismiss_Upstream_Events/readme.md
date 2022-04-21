@@ -1,6 +1,6 @@
 # Dismiss-Upstream-Events
 
-[link to raw](#https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Playbooks/Dismiss_Upstream_Events/azuredeploy.json)
+[link to raw](https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Playbooks/Dismiss_Upstream_Events/azuredeploy.json)
 
 This playbook will close/dismiss upstream events in MDATP, MCAS and Azure Security Center when closed in Sentinel. The playbook will run on a preselected recurrence schedule.
 

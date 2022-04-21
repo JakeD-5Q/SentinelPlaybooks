@@ -17,4 +17,4 @@ The following entity types will be enriched with this playbook:
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure%2FAzure-Sentinel%2Fmaster%2FPlaybooks%2FEnrich-Sentinel-Incident-AlienVault-OTX%2Fazuredeploy.json)
 
 
-[LINK TO RAW](#https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Playbooks/Enrich-Sentinel-Incident-AlienVault-OTX/azuredeploy.json)
+[LINK TO RAW](https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Playbooks/Enrich-Sentinel-Incident-AlienVault-OTX/azuredeploy.json)

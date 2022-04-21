@@ -1,5 +1,4 @@
 # Get-MDEFileActivityWithin30Mins
-[link to raw](#https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Playbooks/Get-MDEFileActivityWithin30Mins/azuredeploy.json)
 
 ## Overview
 This Playbook queries Microsoft Defender for Endpoint telemetry data via the Microsoft 365 Defender Advanced Hunting API for all File Events (Read, Write, Modify, Delete) that occur within 30 minutes of the incident and adds a comment to the incident specifying the number of File Events and KQL query that will list all of the events.
@@ -26,6 +25,6 @@ The File Events are stored in a Log Analytics Workspace (preferable the one you 
 Once this Playbooks template is deployed, you will need to go into the Logic App, edit it and click on each of the steps that require an authenticated connection to your tenant and complete the connection process.  These steps will have and exclamation point showing that the connection needs to be completed.  Make sure to also open the "For each" step and the "Condition 2" step within it which also contains steps that require authenticated connections.
 
 
-
-
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure%2FAzure-Sentinel%2Fmaster%2FPlaybooks%2FGet-MDEFileActivityWithin30Mins%2Fazuredeploy.json)
+
+[link to raw](https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Playbooks/Get-MDEFileActivityWithin30Mins/azuredeploy.json)

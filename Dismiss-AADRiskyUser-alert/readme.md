@@ -1,6 +1,6 @@
 # Dismiss-AADRiskyUser
 
-[Link to raw](#https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Playbooks/Dismiss-AADRiskyUser/alert-trigger/azuredeploy.json)
+[Link to raw](https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Playbooks/Dismiss-AADRiskyUser/alert-trigger/azuredeploy.json)
 
 This playbook will dismiss the Risky User property in AAD using Graph API.
 

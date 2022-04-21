@@ -6,10 +6,7 @@ This playbook will reset the user password using Graph API.  It will send the pa
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure%2FAzure-Sentinel%2Fmaster%2FPlaybooks%2FReset-AADUserPassword%2Falert-trigger%2Fazuredeploy.json)
 
 
-[link to raw](#https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Playbooks/Reset-AADUserPassword/alert-trigger/azuredeploy.json)
-
-
-
+[link to raw](https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Playbooks/Reset-AADUserPassword/alert-trigger/azuredeploy.json)
 
 ## Prerequisites
 

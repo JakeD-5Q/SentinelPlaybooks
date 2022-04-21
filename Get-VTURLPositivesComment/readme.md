@@ -1,10 +1,8 @@
 # Get-VTURLPositivesComment
 
 ## Overview
+
 This Playbook queries the VirusTotal API for all the URL entities and gets the total number of positives and adds that as a comment.
-
-[link to raw](#https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Playbooks/Get-VTURLPositivesComment/azuredeploy.json)
-
 
 ## Required Paramaters
 - Region<br />
@@ -23,3 +21,6 @@ Once this Playbooks template is deployed, you will need to go into the Logic App
 
 
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure%2FAzure-Sentinel%2Fmaster%2FPlaybooks%2FGet-VTURLPositivesComment%2Fazuredeploy.json)
+
+
+[link to raw](https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Playbooks/Get-VTURLPositivesComment/azuredeploy.json)

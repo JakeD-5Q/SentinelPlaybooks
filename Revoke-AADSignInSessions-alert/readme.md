@@ -8,7 +8,7 @@ This playbook will revoke all signin sessions for the user using Graph API. It w
 </a>
 
 
-[link to raw](#https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Playbooks/Revoke-AADSignInSessions/alert-trigger/azuredeploy.json)
+[link to raw](https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Playbooks/Revoke-AADSignInSessions/alert-trigger/azuredeploy.json)
 
 
 ## Prerequisites
