@@ -1,6 +1,9 @@
 # Deploy ARM templates
 
-To deploy these ARM templates using Azure PowerShell use the following script template for deploying local templates:
+Use the following templatized scripts to deploy the desired type of template.
+
+
+## Local Template
 
 ```powershell
 $location = ''
@@ -19,7 +22,7 @@ Set-AzContext $SubscriptionId
 # deployment must be ran from the clients tenant
 
 # local deployment
-New-AzDeployment `
+New-AzResourceGroupDeployment `
   -Name $DeploymentName `
   -Location $location `
   -TemplateFile $TemplateFile `
@@ -27,16 +30,14 @@ New-AzDeployment `
   -Verbose
 ```
 
-
-To deploy remote templates:
-
+## Remote Templates
 
 
 ```powershell
 $location = ''
 $SubscriptionId = ''
 $deploymentName = ''
-$remoteUrl
+$remoteUrl = ''
 
 # Connect to Azure account
 Connect-AzAccount
@@ -46,11 +47,10 @@ Set-AzContext $SubscriptionId
 
 $remoteUrl = 'https://raw.githubusercontent.com/JakeD-5Q/SentinelPlaybooks/<PlaybookName>/template.json'
 
-remote deployment
-New-AzDeployment `
+# remote deployment
+New-AzResourceGroupDeployment `
   -Name $DeploymentName `
   -Location $location `
   -TemplateUri $remoteUrl `
   -Verbose
-
 ```

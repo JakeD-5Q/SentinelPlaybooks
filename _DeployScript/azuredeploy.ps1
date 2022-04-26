@@ -7,7 +7,7 @@ Set-AzContext $SubscriptionId
 # deployment must be ran from the clients tenant
 
 # local deployment
-New-AzDeployment `
+New-AzResourceGroupDeployment `
     -Name $DeploymentName `
     -Location $location `
     -TemplateFile $TemplateFile `
@@ -18,7 +18,7 @@ New-AzDeployment `
 # $remoteUrl = 'https://raw.githubusercontent.com/JakeD-5Q/DeploySentinelProcedure/main/01-Lighthouse/lighthouse.template.json'
 
 # remote deployment
-# New-AzDeployment `
+# New-AzResourceGroupDeployment `
 #   -Name $DeploymentName `
 #   -Location $location `
 #   -TemplateUri $remoteUrl `
