@@ -1,0 +1,874 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "workflows_5QC_EmailEnrichment_name": {
+            "defaultValue": "5QC.EmailEnrichment",
+            "type": "String"
+        },
+        "connections_azuresentinel_4_externalid": {
+            "defaultValue": "/subscriptions/a1a21640-263b-45e1-9ad1-be5b4e1eb6ad/resourceGroups/5Q-RG-Playbooks/providers/Microsoft.Web/connections/azuresentinel-4",
+            "type": "String"
+        },
+        "connections_teams_5_externalid": {
+            "defaultValue": "/subscriptions/a1a21640-263b-45e1-9ad1-be5b4e1eb6ad/resourceGroups/5Q-RG-Playbooks/providers/Microsoft.Web/connections/teams-5",
+            "type": "String"
+        },
+        "connections_virustotal_2_externalid": {
+            "defaultValue": "/subscriptions/a1a21640-263b-45e1-9ad1-be5b4e1eb6ad/resourceGroups/5Q-RG-Playbooks/providers/Microsoft.Web/connections/virustotal-2",
+            "type": "String"
+        }
+    },
+    "variables": {},
+    "resources": [
+        {
+            "type": "Microsoft.Logic/workflows",
+            "apiVersion": "2017-07-01",
+            "name": "[parameters('workflows_5QC_EmailEnrichment_name')]",
+            "location": "centralus",
+            "properties": {
+                "state": "Enabled",
+                "definition": {
+                    "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+                    "contentVersion": "1.0.0.0",
+                    "parameters": {
+                        "$connections": {
+                            "defaultValue": {},
+                            "type": "Object"
+                        }
+                    },
+                    "triggers": {
+                        "Microsoft_Sentinel_incident": {
+                            "type": "ApiConnectionWebhook",
+                            "inputs": {
+                                "body": {
+                                    "callback_url": "@{listCallbackUrl()}"
+                                },
+                                "host": {
+                                    "connection": {
+                                        "name": "@parameters('$connections')['azuresentinel']['connectionId']"
+                                    }
+                                },
+                                "path": "/incident-creation"
+                            }
+                        }
+                    },
+                    "actions": {
+                        "Add_comment_to_incident_(V3)": {
+                            "runAfter": {
+                                "Compose_comment": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "ApiConnection",
+                            "inputs": {
+                                "body": {
+                                    "incidentArmId": "@triggerBody()?['object']?['id']",
+                                    "message": "<p>@{outputs('Compose_comment')}<br>\n</p>"
+                                },
+                                "host": {
+                                    "connection": {
+                                        "name": "@parameters('$connections')['azuresentinel']['connectionId']"
+                                    }
+                                },
+                                "method": "post",
+                                "path": "/Incidents/Comment"
+                            }
+                        },
+                        "Compose_comment": {
+                            "runAfter": {
+                                "Create_UrlsClicked_HTML_table": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "Compose",
+                            "inputs": "Email Information\n@{body('Create_Email_Information_HTML_table')}\n\nEntities\n@{body('Create_VirusTotal_HTML_table')}\n\nURLs clicked:\n@{body('Create_UrlsClicked_HTML_table')}\nNote: There will not be any information below if there were not any links clicked\n\n\nEmail has been enriched using playbook. View incident here: @{triggerBody()?['object']?['properties']?['incidentUrl']}\n\n"
+                        },
+                        "Compose_mail_table": {
+                            "runAfter": {
+                                "Create_VirusTotal_HTML_table": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "Compose",
+                            "inputs": {
+                                "DeliveryAction": "@{body('Parse_JSON_--_MailMessage')?['properties']?['deliveryAction']}",
+                                "DeliveryLocation": "@{body('Parse_JSON_--_MailMessage')?['properties']?['additionalData']?['OriginalDeliveryLocation']}",
+                                "Recipient": "@{body('Parse_JSON_--_MailMessage')?['properties']?['recipient']}",
+                                "Sender": "@{body('Parse_JSON_--_MailMessage')?['properties']?['p1Sender']}",
+                                "SenderP2": "@{body('Parse_JSON_--_MailMessage')?['properties']?['p2Sender']}",
+                                "Subject": "@{body('Parse_JSON_--_MailMessage')?['properties']?['subject']}"
+                            }
+                        },
+                        "Condition": {
+                            "actions": {
+                                "Append_to_array_variable": {
+                                    "runAfter": {},
+                                    "type": "AppendToArrayVariable",
+                                    "inputs": {
+                                        "name": "URL array",
+                                        "value": "@body('Parse_JSON_--_URL_entity')?['properties']?['url']"
+                                    }
+                                }
+                            },
+                            "runAfter": {
+                                "Parse_JSON_--_URL_entity": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "expression": {
+                                "and": [
+                                    {
+                                        "greater": [
+                                            "@body('Parse_JSON_--_URL_entity')?['properties']?['additionalData']?['ClickCount']",
+                                            0
+                                        ]
+                                    }
+                                ]
+                            },
+                            "type": "If"
+                        },
+                        "Create_Email_Information_HTML_table": {
+                            "runAfter": {
+                                "Compose_mail_table": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "Table",
+                            "inputs": {
+                                "format": "HTML",
+                                "from": "@outputs('Compose_mail_table')"
+                            }
+                        },
+                        "Create_UrlsClicked_HTML_table": {
+                            "runAfter": {
+                                "Condition": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "Table",
+                            "inputs": {
+                                "format": "HTML",
+                                "from": "@variables('URL array')"
+                            }
+                        },
+                        "Create_VirusTotal_HTML_table": {
+                            "runAfter": {
+                                "Select_VirusTotal": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "Table",
+                            "inputs": {
+                                "format": "HTML",
+                                "from": "@body('Select_VirusTotal')"
+                            }
+                        },
+                        "Filter_URL_array": {
+                            "runAfter": {
+                                "Create_Email_Information_HTML_table": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "Query",
+                            "inputs": {
+                                "from": "@body('Parse_JSON_--_BODY')?['object']?['properties']?['relatedEntities']",
+                                "where": "@equals(item()?['kind'], 'Url')"
+                            }
+                        },
+                        "Filter_array_--_MailMessage": {
+                            "runAfter": {
+                                "Initialize_Entity_array": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "Query",
+                            "inputs": {
+                                "from": "@body('Parse_JSON_--_BODY')?['object']?['properties']?['relatedEntities']",
+                                "where": "@equals(item()?['kind'], 'MailMessage')"
+                            }
+                        },
+                        "Get_Domain_report": {
+                            "runAfter": {
+                                "Get_an_IP_report": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "ApiConnection",
+                            "inputs": {
+                                "host": {
+                                    "connection": {
+                                        "name": "@parameters('$connections')['virustotal']['connectionId']"
+                                    }
+                                },
+                                "method": "get",
+                                "path": "/api/v3/domains/@{encodeURIComponent(body('Parse_JSON_--_MailMessage')?['properties']?['p1SenderDomain'])}"
+                            }
+                        },
+                        "Get_Domain_report_2": {
+                            "runAfter": {
+                                "Get_Domain_report": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "ApiConnection",
+                            "inputs": {
+                                "host": {
+                                    "connection": {
+                                        "name": "@parameters('$connections')['virustotal']['connectionId']"
+                                    }
+                                },
+                                "method": "get",
+                                "path": "/api/v3/domains/@{encodeURIComponent(body('Parse_JSON_--_MailMessage')?['properties']?['p2SenderDomain'])}"
+                            }
+                        },
+                        "Get_an_IP_report": {
+                            "runAfter": {
+                                "Initialize_URL_array": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "ApiConnection",
+                            "inputs": {
+                                "host": {
+                                    "connection": {
+                                        "name": "@parameters('$connections')['virustotal']['connectionId']"
+                                    }
+                                },
+                                "method": "get",
+                                "path": "/api/v3/ip_addresses/connectorV2/@{encodeURIComponent(body('Parse_JSON_--_MailMessage')?['properties']?['senderIP'])}"
+                            }
+                        },
+                        "Initialize_Entity_array": {
+                            "runAfter": {
+                                "Parse_JSON_--_BODY": [
+                                    "Succeeded"
+                                ],
+                                "Parse_JSON_--_Entities": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "InitializeVariable",
+                            "inputs": {
+                                "variables": [
+                                    {
+                                        "name": "Entity array",
+                                        "type": "array",
+                                        "value": "@triggerBody()?['object']?['properties']?['relatedEntities']"
+                                    }
+                                ]
+                            }
+                        },
+                        "Initialize_URL_array": {
+                            "runAfter": {
+                                "Parse_JSON_--_MailMessage": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "InitializeVariable",
+                            "inputs": {
+                                "variables": [
+                                    {
+                                        "name": "URL array",
+                                        "type": "array",
+                                        "value": "@body('Parse_JSON_--_MailMessage')?['properties']?['urls']"
+                                    }
+                                ]
+                            }
+                        },
+                        "Parse_JSON_--_BODY": {
+                            "runAfter": {},
+                            "type": "ParseJson",
+                            "inputs": {
+                                "content": "@triggerBody()",
+                                "schema": {
+                                    "properties": {
+                                        "eventUniqueId": {
+                                            "type": "string"
+                                        },
+                                        "object": {
+                                            "properties": {
+                                                "etag": {
+                                                    "type": "string"
+                                                },
+                                                "id": {
+                                                    "type": "string"
+                                                },
+                                                "name": {
+                                                    "type": "string"
+                                                },
+                                                "properties": {
+                                                    "properties": {
+                                                        "additionalData": {
+                                                            "properties": {
+                                                                "alertProductNames": {
+                                                                    "items": {
+                                                                        "type": "string"
+                                                                    },
+                                                                    "type": "array"
+                                                                },
+                                                                "alertsCount": {
+                                                                    "type": "integer"
+                                                                },
+                                                                "bookmarksCount": {
+                                                                    "type": "integer"
+                                                                },
+                                                                "commentsCount": {
+                                                                    "type": "integer"
+                                                                },
+                                                                "tactics": {
+                                                                    "items": {
+                                                                        "type": "string"
+                                                                    },
+                                                                    "type": "array"
+                                                                },
+                                                                "techniques": {
+                                                                    "type": "array"
+                                                                }
+                                                            },
+                                                            "type": "object"
+                                                        },
+                                                        "alerts": {
+                                                            "items": {
+                                                                "properties": {
+                                                                    "id": {
+                                                                        "type": "string"
+                                                                    },
+                                                                    "kind": {
+                                                                        "type": "string"
+                                                                    },
+                                                                    "properties": {
+                                                                        "properties": {
+                                                                            "additionalData": {
+                                                                                "properties": {
+                                                                                    "Alert generation status": {
+                                                                                        "type": "string"
+                                                                                    },
+                                                                                    "InvestigationName": {
+                                                                                        "type": "string"
+                                                                                    },
+                                                                                    "ProcessedBySentinel": {
+                                                                                        "type": "string"
+                                                                                    },
+                                                                                    "Status": {
+                                                                                        "type": "string"
+                                                                                    }
+                                                                                },
+                                                                                "type": "object"
+                                                                            },
+                                                                            "alertDisplayName": {
+                                                                                "type": "string"
+                                                                            },
+                                                                            "alertLink": {
+                                                                                "type": "string"
+                                                                            },
+                                                                            "alertType": {
+                                                                                "type": "string"
+                                                                            },
+                                                                            "confidenceLevel": {
+                                                                                "type": "string"
+                                                                            },
+                                                                            "confidenceScore": {
+                                                                                "type": "integer"
+                                                                            },
+                                                                            "description": {
+                                                                                "type": "string"
+                                                                            },
+                                                                            "endTimeUtc": {
+                                                                                "type": "string"
+                                                                            },
+                                                                            "friendlyName": {
+                                                                                "type": "string"
+                                                                            },
+                                                                            "processingEndTime": {
+                                                                                "type": "string"
+                                                                            },
+                                                                            "productName": {
+                                                                                "type": "string"
+                                                                            },
+                                                                            "providerAlertId": {
+                                                                                "type": "string"
+                                                                            },
+                                                                            "resourceIdentifiers": {
+                                                                                "items": {
+                                                                                    "properties": {
+                                                                                        "type": {
+                                                                                            "type": "string"
+                                                                                        },
+                                                                                        "workspaceId": {
+                                                                                            "type": "string"
+                                                                                        }
+                                                                                    },
+                                                                                    "required": [
+                                                                                        "type",
+                                                                                        "workspaceId"
+                                                                                    ],
+                                                                                    "type": "object"
+                                                                                },
+                                                                                "type": "array"
+                                                                            },
+                                                                            "severity": {
+                                                                                "type": "string"
+                                                                            },
+                                                                            "startTimeUtc": {
+                                                                                "type": "string"
+                                                                            },
+                                                                            "status": {
+                                                                                "type": "string"
+                                                                            },
+                                                                            "systemAlertId": {
+                                                                                "type": "string"
+                                                                            },
+                                                                            "tactics": {
+                                                                                "items": {
+                                                                                    "type": "string"
+                                                                                },
+                                                                                "type": "array"
+                                                                            },
+                                                                            "timeGenerated": {
+                                                                                "type": "string"
+                                                                            },
+                                                                            "vendorName": {
+                                                                                "type": "string"
+                                                                            }
+                                                                        },
+                                                                        "type": "object"
+                                                                    },
+                                                                    "type": {
+                                                                        "type": "string"
+                                                                    }
+                                                                },
+                                                                "required": [
+                                                                    "id",
+                                                                    "kind",
+                                                                    "properties",
+                                                                    "type"
+                                                                ],
+                                                                "type": "object"
+                                                            },
+                                                            "type": "array"
+                                                        },
+                                                        "bookmarks": {
+                                                            "type": "array"
+                                                        },
+                                                        "comments": {
+                                                            "type": "array"
+                                                        },
+                                                        "createdTimeUtc": {
+                                                            "type": "string"
+                                                        },
+                                                        "description": {
+                                                            "type": "string"
+                                                        },
+                                                        "firstActivityTimeUtc": {
+                                                            "type": "string"
+                                                        },
+                                                        "incidentNumber": {
+                                                            "type": "integer"
+                                                        },
+                                                        "incidentUrl": {
+                                                            "type": "string"
+                                                        },
+                                                        "labels": {
+                                                            "items": {
+                                                                "properties": {
+                                                                    "labelName": {
+                                                                        "type": "string"
+                                                                    },
+                                                                    "labelType": {
+                                                                        "type": "string"
+                                                                    }
+                                                                },
+                                                                "required": [
+                                                                    "labelName",
+                                                                    "labelType"
+                                                                ],
+                                                                "type": "object"
+                                                            },
+                                                            "type": "array"
+                                                        },
+                                                        "lastActivityTimeUtc": {
+                                                            "type": "string"
+                                                        },
+                                                        "lastModifiedTimeUtc": {
+                                                            "type": "string"
+                                                        },
+                                                        "owner": {
+                                                            "properties": {
+                                                                "assignedTo": {
+                                                                    "type": "string"
+                                                                },
+                                                                "email": {
+                                                                    "type": "string"
+                                                                },
+                                                                "objectId": {
+                                                                    "type": "string"
+                                                                },
+                                                                "userPrincipalName": {
+                                                                    "type": "string"
+                                                                }
+                                                            },
+                                                            "type": "object"
+                                                        },
+                                                        "providerIncidentId": {
+                                                            "type": "string"
+                                                        },
+                                                        "providerName": {
+                                                            "type": "string"
+                                                        },
+                                                        "relatedAnalyticRuleIds": {
+                                                            "items": {
+                                                                "type": "string"
+                                                            },
+                                                            "type": "array"
+                                                        },
+                                                        "relatedEntities": {
+                                                            "type": "array"
+                                                        },
+                                                        "severity": {
+                                                            "type": "string"
+                                                        },
+                                                        "status": {
+                                                            "type": "string"
+                                                        },
+                                                        "title": {
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                },
+                                                "type": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "type": "object"
+                                        },
+                                        "objectEventType": {
+                                            "type": "string"
+                                        },
+                                        "objectSchemaType": {
+                                            "type": "string"
+                                        },
+                                        "workspaceId": {
+                                            "type": "string"
+                                        },
+                                        "workspaceInfo": {
+                                            "properties": {
+                                                "ResourceGroupName": {
+                                                    "type": "string"
+                                                },
+                                                "SubscriptionId": {
+                                                    "type": "string"
+                                                },
+                                                "WorkspaceName": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "Parse_JSON_--_Entities": {
+                            "runAfter": {},
+                            "type": "ParseJson",
+                            "inputs": {
+                                "content": "@triggerBody()?['object']?['properties']?['relatedEntities']",
+                                "schema": {
+                                    "items": {
+                                        "properties": {
+                                            "id": {
+                                                "type": "string"
+                                            },
+                                            "kind": {
+                                                "type": "string"
+                                            },
+                                            "properties": {
+                                                "properties": {
+                                                    "additionalData": {
+                                                        "properties": {
+                                                            "FirstSeen": {
+                                                                "type": "string"
+                                                            },
+                                                            "Source": {
+                                                                "type": "string"
+                                                            },
+                                                            "Urn": {
+                                                                "type": "string"
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    },
+                                                    "friendlyName": {
+                                                        "type": "string"
+                                                    },
+                                                    "mailboxPrimaryAddress": {
+                                                        "type": "string"
+                                                    },
+                                                    "upn": {
+                                                        "type": "string"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            },
+                                            "type": {
+                                                "type": "string"
+                                            }
+                                        },
+                                        "required": [
+                                            "id",
+                                            "type",
+                                            "kind",
+                                            "properties"
+                                        ],
+                                        "type": "object"
+                                    },
+                                    "type": "array"
+                                }
+                            }
+                        },
+                        "Parse_JSON_--_MailMessage": {
+                            "runAfter": {
+                                "Filter_array_--_MailMessage": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "ParseJson",
+                            "inputs": {
+                                "content": "@body('Filter_array_--_MailMessage')",
+                                "schema": {
+                                    "properties": {
+                                        "id": {
+                                            "type": "string"
+                                        },
+                                        "kind": {
+                                            "type": "string"
+                                        },
+                                        "properties": {
+                                            "properties": {
+                                                "additionalData": {
+                                                    "properties": {
+                                                        "AdditionalActionsAndResults": {
+                                                            "type": "string"
+                                                        },
+                                                        "AuthDetails": {
+                                                            "type": "string"
+                                                        },
+                                                        "FirstSeen": {
+                                                            "type": "string"
+                                                        },
+                                                        "OriginalDeliveryLocation": {
+                                                            "type": "string"
+                                                        },
+                                                        "Source": {
+                                                            "type": "string"
+                                                        },
+                                                        "SystemOverrides": {
+                                                            "type": "string"
+                                                        },
+                                                        "Urn": {
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                },
+                                                "antispamDirection": {
+                                                    "type": "string"
+                                                },
+                                                "deliveryAction": {
+                                                    "type": "string"
+                                                },
+                                                "fileEntityIds": {
+                                                    "type": "array"
+                                                },
+                                                "friendlyName": {
+                                                    "type": "string"
+                                                },
+                                                "internetMessageId": {
+                                                    "type": "string"
+                                                },
+                                                "language": {
+                                                    "type": "string"
+                                                },
+                                                "networkMessageId": {
+                                                    "type": "string"
+                                                },
+                                                "p1Sender": {
+                                                    "type": "string"
+                                                },
+                                                "p1SenderDomain": {
+                                                    "type": "string"
+                                                },
+                                                "p2Sender": {
+                                                    "type": "string"
+                                                },
+                                                "p2SenderDisplayName": {
+                                                    "type": "string"
+                                                },
+                                                "p2SenderDomain": {
+                                                    "type": "string"
+                                                },
+                                                "receiveDate": {
+                                                    "type": "string"
+                                                },
+                                                "recipient": {
+                                                    "type": "string"
+                                                },
+                                                "senderIP": {
+                                                    "type": "string"
+                                                },
+                                                "subject": {
+                                                    "type": "string"
+                                                },
+                                                "threatDetectionMethods": {
+                                                    "items": {
+                                                        "type": "string"
+                                                    },
+                                                    "type": "array"
+                                                },
+                                                "urls": {
+                                                    "items": {
+                                                        "type": "string"
+                                                    },
+                                                    "type": "array"
+                                                }
+                                            },
+                                            "type": "object"
+                                        },
+                                        "type": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "Parse_JSON_--_URL_entity": {
+                            "runAfter": {
+                                "Filter_URL_array": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "ParseJson",
+                            "inputs": {
+                                "content": "@body('Filter_URL_array')",
+                                "schema": {
+                                    "properties": {
+                                        "id": {
+                                            "type": "string"
+                                        },
+                                        "kind": {
+                                            "type": "string"
+                                        },
+                                        "properties": {
+                                            "properties": {
+                                                "additionalData": {
+                                                    "properties": {
+                                                        "ClickCount": {
+                                                            "type": "integer"
+                                                        },
+                                                        "EmailCount": {
+                                                            "type": "integer"
+                                                        },
+                                                        "FirstSeen": {
+                                                            "type": "string"
+                                                        },
+                                                        "Source": {
+                                                            "type": "string"
+                                                        },
+                                                        "Urn": {
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                },
+                                                "friendlyName": {
+                                                    "type": "string"
+                                                },
+                                                "url": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "type": "object"
+                                        },
+                                        "type": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "Post_message_in_a_chat_or_channel": {
+                            "runAfter": {
+                                "Compose_comment": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "ApiConnection",
+                            "inputs": {
+                                "body": {
+                                    "messageBody": "<p>@{triggerBody()?['object']?['properties']?['severity']}-@{triggerBody()?['object']?['properties']?['incidentNumber']}-@{triggerBody()?['object']?['properties']?['title']}<br>\n<br>\n@{outputs('Compose_comment')}</p>",
+                                    "recipient": {
+                                        "channelId": "19:c458c7d16fc84260883e38d30c2b861b@thread.tacv2",
+                                        "groupId": "31b9af4e-30d6-4bce-826d-7723dffda48e"
+                                    }
+                                },
+                                "host": {
+                                    "connection": {
+                                        "name": "@parameters('$connections')['teams']['connectionId']"
+                                    }
+                                },
+                                "method": "post",
+                                "path": "/beta/teams/conversation/message/poster/Flow bot/location/@{encodeURIComponent('Channel')}"
+                            }
+                        },
+                        "Select_VirusTotal": {
+                            "runAfter": {
+                                "Get_Domain_report_2": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "Select",
+                            "inputs": {
+                                "from": "@body('Get_an_IP_report')",
+                                "select": {
+                                    "Domain2Reputation": "@body('Get_Domain_report_2')?['data']?['attributes']?['reputation']",
+                                    "DomainReputation": "@body('Get_Domain_report')?['data']?['attributes']?['reputation']",
+                                    "IpReputation": "@body('Get_an_IP_report')?['data']?['attributes']?['reputation']",
+                                    "SenderDomain": "@body('Parse_JSON_--_MailMessage')?['properties']?['p1SenderDomain']",
+                                    "SenderDomain2": "@body('Parse_JSON_--_MailMessage')?['properties']?['p2SenderDomain']",
+                                    "SenderIp": "@body('Parse_JSON_--_MailMessage')?['properties']?['senderIP']"
+                                }
+                            }
+                        }
+                    },
+                    "outputs": {}
+                },
+                "parameters": {
+                    "$connections": {
+                        "value": {
+                            "azuresentinel": {
+                                "connectionId": "[parameters('connections_azuresentinel_4_externalid')]",
+                                "connectionName": "azuresentinel-4",
+                                "id": "/subscriptions/a1a21640-263b-45e1-9ad1-be5b4e1eb6ad/providers/Microsoft.Web/locations/centralus/managedApis/azuresentinel"
+                            },
+                            "teams": {
+                                "connectionId": "[parameters('connections_teams_5_externalid')]",
+                                "connectionName": "teams-5",
+                                "id": "/subscriptions/a1a21640-263b-45e1-9ad1-be5b4e1eb6ad/providers/Microsoft.Web/locations/centralus/managedApis/teams"
+                            },
+                            "virustotal": {
+                                "connectionId": "[parameters('connections_virustotal_2_externalid')]",
+                                "connectionName": "virustotal-2",
+                                "id": "/subscriptions/a1a21640-263b-45e1-9ad1-be5b4e1eb6ad/providers/Microsoft.Web/locations/centralus/managedApis/virustotal"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    ]
+}
