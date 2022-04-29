@@ -19,6 +19,10 @@ Connect-AzAccount
 # Set the correct subscription
 Set-AzContext $SubscriptionId
 
+# or
+
+# C:\PS>(Get-AzureSubscription -Default).SubscriptionName 
+
 # deployment must be ran from the clients tenant
 
 # local deployment
