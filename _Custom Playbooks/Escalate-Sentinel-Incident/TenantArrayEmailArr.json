@@ -2,7 +2,10 @@
     {
         "tenantName": "5qCloud",
         "workspaceId": "357dc956-7779-4705-bb4e-99b880cf897e",
-        "emailList": "SOC@5qcloud.com"
+        "emailList": [
+            "SOC@5qcloud.com",
+            "jake.derkowski@5qcloud.com"
+        ]
     },
     {
         "tenantName": "Beacon",

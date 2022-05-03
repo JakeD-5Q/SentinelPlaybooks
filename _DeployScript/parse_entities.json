@@ -1,0 +1,145 @@
+{
+    "items": {
+        "properties": {
+            "$id": {
+                "type": "string"
+            },
+            "AadUserId": {
+                "type": "string"
+            },
+            "Account": {
+                "properties": {
+                    "$ref": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "Address": {
+                "type": "string"
+            },
+            "Algorithm": {
+                "type": "string"
+            },
+            "CommandLine": {
+                "type": "string"
+            },
+            "CreatedTimeUtc": {
+                "type": "string"
+            },
+            "CreationTimeUtc": {
+                "type": "string"
+            },
+            "Directory": {
+                "type": "string"
+            },
+            "DnsDomain": {
+                "type": "string"
+            },
+            "DomainName": {
+                "type": "string"
+            },
+            "ElevationToken": {
+                "type": "string"
+            },
+            "FileHashes": {
+                "items": {
+                    "properties": {
+                        "$ref": {
+                            "type": "string"
+                        }
+                    },
+                    "required": [
+                        "$ref"
+                    ],
+                    "type": "object"
+                },
+                "type": "array"
+            },
+            "Host": {
+                "properties": {
+                    "$ref": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "HostName": {
+                "type": "string"
+            },
+            "ImageFile": {
+                "properties": {
+                    "$ref": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "IsDomainJoined": {
+                "type": "boolean"
+            },
+            "IsDownloaded": {
+                "type": "boolean"
+            },
+            "IsPe": {
+                "type": "boolean"
+            },
+            "IsValid": {
+                "type": "boolean"
+            },
+            "LastAccessTimeUtc": {
+                "type": "string"
+            },
+            "LastWriteTimeUtc": {
+                "type": "string"
+            },
+            "MachineId": {
+                "type": "string"
+            },
+            "MachineIdType": {
+                "type": "integer"
+            },
+            "NTDomain": {
+                "type": "string"
+            },
+            "Name": {
+                "type": "string"
+            },
+            "ParentProcess": {
+                "properties": {
+                    "$ref": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "ProcessId": {
+                "type": "string"
+            },
+            "Sid": {
+                "type": "string"
+            },
+            "SizeInBytes": {
+                "type": "integer"
+            },
+            "Type": {
+                "type": "string"
+            },
+            "UPNSuffix": {
+                "type": "string"
+            },
+            "Url": {
+                "type": "string"
+            },
+            "Value": {
+                "type": "string"
+            }
+        },
+        "required": [
+            "$id",
+            "Type"
+        ],
+        "type": "object"
+    },
+    "type": "array"
+}
