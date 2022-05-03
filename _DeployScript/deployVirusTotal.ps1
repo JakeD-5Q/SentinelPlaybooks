@@ -19,9 +19,11 @@ Write-Host "This playbooks uses an alert trigger, therefore must be triggered ma
 # `````````````````````````````````````````````````````````````````````````````````````
 $deploymentName = "Get-VTURLPositivesComment_" + $deploySuffix
 $remoteUrl = "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Playbooks/Get-VTURLPositivesComment/azuredeploy.json"
+remoteParameterUrl = ""
 New-AzResourceGroupDeployment -Name $deploymentName `
     -ResourceGroupName $myRg `
     -TemplateUri $remoteUrl `
+    --TemplateParameterUri $remoteParameterUrl
     -Verbose
 
 # `````````````````````````````````````````````````````````````````````````````````````
