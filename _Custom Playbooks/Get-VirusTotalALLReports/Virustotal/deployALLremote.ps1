@@ -21,9 +21,11 @@ Write-Host "This playbooks uses an alert trigger, therefore must be triggered ma
 # `````````````````````````````````````````````````````````````````````````````````````
 $deploymentName = "Get-VTURLPositivesComment_" + $deploySuffix
 $remoteUrl = "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Playbooks/Get-VTURLPositivesComment/azuredeploy.json"
+$remoteTemplate = ''
 New-AzResourceGroupDeployment -Name $deploymentName `
     -ResourceGroupName $myRg `
     -TemplateUri $remoteUrl `
+    -TemplateParameterFile $remoteTemplate
     -Verbose
 
 # `````````````````````````````````````````````````````````````````````````````````````
@@ -32,24 +34,41 @@ Write-Host "The following playbooks must be attached to an automation rule for t
 # `````````````````````````````````````````````````````````````````````````````````````
 $deploymentName = "Get-VTDomain_" + $deploySuffix
 $remoteUrl = "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Playbooks/Get-VirusTotalDomainReport/incident-trigger/azuredeploy.json"
+$remoteTemplate = ''
 New-AzResourceGroupDeployment -Name $deploymentName `
     -ResourceGroupName $myRg `
     -TemplateUri $remoteUrl `
+    -TemplateParameterFile $remoteTemplate
     -Verbose
+
 
 $deploymentName = "Get-VTFile_" + $deploySuffix
 $remoteUrl = "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Playbooks/Get-VirusTotalFileInfo/incident-trigger/azuredeploy.json"
+$remoteTemplate = ''
 New-AzResourceGroupDeployment -Name $deploymentName `
     -ResourceGroupName $myRg `
     -TemplateUri $remoteUrl `
+    -TemplateParameterFile $remoteTemplate
     -Verbose
 
 
 $deploymentName = "Get-VTIPaddr_" + $deploySuffix
 $remoteUrl = "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Playbooks/Get-VirusTotalIPReport/incident-trigger/azuredeploy.json"
-New-AzResourceGroupDeployment -ResourceGroupName $myRg -TemplateFile $TemplateFile -TemplateParameterFile $ParameterFile -Name $deploymentName -Verbose
+$remoteTemplate = ''
+New-AzResourceGroupDeployment -Name $deploymentName `
+    -ResourceGroupName $myRg `
+    -TemplateUri $remoteUrl `
+    -TemplateParameterFile $remoteTemplate
+    -Verbose
 
 
 $deploymentName = "Get-VTURL_" + $deploySuffix
 $remoteUrl = "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Playbooks/Get-VirusTotalURLReport/incident-trigger/azuredeploy.json"
-New-AzResourceGroupDeployment -ResourceGroupName $myRg -TemplateFile $TemplateFile -TemplateParameterFile $ParameterFile -Name $deploymentName -Verbose
+$remoteTemplate = ''
+New-AzResourceGroupDeployment -Name $deploymentName `
+    -ResourceGroupName $myRg `
+    -TemplateUri $remoteUrl `
+    -TemplateParameterFile $remoteTemplate
+    -Verbose
+
+WRITE-HOST "FIX ALL REMOTE URLs TO THE LOCAL GITHUB TEMPLATES"
