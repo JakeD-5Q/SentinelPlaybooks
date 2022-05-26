@@ -41,3 +41,12 @@ New-AzResourceGroupDeployment -Name $deploymentName `
     -TemplateUri $remoteUrl `
     -TemplateParameterFile $remoteTemplate
     -Verbose
+
+
+    
+# USE FOR LOCAL TEMPLATE DEPLOYS
+# New-AzResourceGroupDeployment -ResourceGroupName $myRg `
+#  -TemplateFile $TemplateFile `
+#  -TemplateParameterFile $ParameterFile `
+#  -Name $deploymentName `
+#  -Verbose
