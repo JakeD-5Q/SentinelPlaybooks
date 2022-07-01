@@ -1,0 +1,334 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "PlaybookName": {
+            "defaultValue": "Get-IPGEO-TagIncident",
+            "type": "string"
+        }
+    },
+    "variables": {
+        "MicrosoftSentinelConnectionName": "[concat('MicrosoftSentinel-', parameters('PlaybookName'))]",
+        "VirustotalConnectionName": "[concat('Virustotal-', parameters('PlaybookName'))]"
+    },
+    "resources": [
+        {
+            "properties": {
+                "provisioningState": "Succeeded",
+                "state": "Enabled",
+                "definition": {
+                    "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+                    "contentVersion": "1.0.0.0",
+                    "parameters": {
+                        "$connections": {
+                        "defaultValue": {},
+                        "type": "Object"
+                    }
+                },
+                "triggers": {
+                    "Microsoft_Sentinel_incident": {
+                        "type": "ApiConnectionWebhook",
+                        "inputs": {
+                            "body": {
+                                "callback_url": "@{listCallbackUrl()}"
+                            },
+                            "host": {
+                                "connection": {
+                                    "name": "@parameters('$connections')['azuresentinel']['connectionId']"
+                                }
+                            },
+                            "path": "/incident-creation"
+                        }
+                    }
+                },
+                "actions": {
+                    "Entities_-_Get_IPs": {
+                    "runAfter": {},
+                    "type": "ApiConnection",
+                    "inputs": {
+                        "body": "@triggerBody()?['object']?['properties']?['relatedEntities']",
+                        "host": {
+                            "connection": {
+                                "name": "@parameters('$connections')['azuresentinel']['connectionId']"
+                            }
+                        },
+                        "method": "post",
+                        "path": "/entities/ip"
+                    }
+                },
+                "Filter_array": {
+                    "runAfter": {
+                        "Entities_-_Get_IPs": [
+                            "Succeeded"
+                        ]
+                    },
+                    "type": "Query",
+                    "inputs": {
+                        "from": "@body('Entities_-_Get_IPs')?['IPs']",
+                        "where": "@equals(item()?['Type'], 'ip')"
+                    }
+                },
+                "For_each": {
+                    "foreach": "@body('Filter_array')",
+                    "actions": {
+                        "Add_comment_to_incident_(V3)": {
+                            "runAfter": {
+                                "Create_HTML_table_2": [
+                                    "Succeeded"
+                                ],
+                                "Update_incident": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "ApiConnection",
+                            "inputs": {
+                                "body": {
+                                    "incidentArmId": "@body('Update_incident')?['id']",
+                                    "message": "<p>@{body('Create_HTML_table')}<br>\n@{body('Create_HTML_table_2')}<br>\n</p>"
+                                },
+                                "host": {
+                                    "connection": {
+                                        "name": "@parameters('$connections')['azuresentinel']['connectionId']"
+                                    }
+                                },
+                                "method": "post",
+                                "path": "/Incidents/Comment"
+                            }
+                        },
+                        "Compose": {
+                            "runAfter": {
+                                "Parse_JSON": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "Compose",
+                            "inputs": {
+                                "Address": "@{body('Parse_JSON')?['query']}",
+                                "City": "@body('Parse_JSON')?['city']",
+                                "Country": "@body('Parse_JSON')?['country']",
+                                "ISP": "@body('Parse_JSON')?['isp']",
+                                "Org": "@body('Parse_JSON')?['org']",
+                                "Region": "@body('Parse_JSON')?['region']"
+                            }
+                        },
+                        "Compose_2": {
+                            "runAfter": {
+                                "Get_an_IP_report_2": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "Compose",
+                            "inputs": {
+                                "Harmless": "@body('Get_an_IP_report_2')?['data']?['attributes']?['total_votes']?['harmless']",
+                                "IpAddress": "@{items('For_each')?['Address']}",
+                                "Malicious": "@body('Get_an_IP_report_2')?['data']?['attributes']?['total_votes']?['malicious']",
+                                "Reputation": "@body('Get_an_IP_report_2')?['data']?['attributes']?['reputation']"
+                            }
+                        },
+                        "Create_HTML_table": {
+                            "runAfter": {
+                                "Compose": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "Table",
+                            "inputs": {
+                                "format": "HTML",
+                                "from": "@array(outputs('Compose'))"
+                            }
+                        },
+                        "Create_HTML_table_2": {
+                            "runAfter": {
+                                "Compose_2": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "Table",
+                            "inputs": {
+                                "format": "HTML",
+                                "from": "@array(outputs('Compose_2'))"
+                            }
+                        },
+                        "Get_an_IP_report_2": {
+                            "runAfter": {
+                                "HTTP": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "ApiConnection",
+                            "inputs": {
+                                "host": {
+                                    "connection": {
+                                        "name": "@parameters('$connections')['virustotal_1']['connectionId']"
+                                    }
+                                },
+                                "method": "get",
+                                "path": "/api/v3/ip_addresses/connectorV2/@{encodeURIComponent(items('For_each')?['Address'])}"
+                            }
+                        },
+                        "HTTP": {
+                        "runAfter": {},
+                        "type": "Http",
+                        "inputs": {
+                            "method": "GET",
+                            "uri": "http://ip-api.com/json/@{items('For_each')?['Address']}"
+                        }
+                    },
+                    "Parse_JSON": {
+                        "runAfter": {
+                            "HTTP": [
+                                "Succeeded"
+                            ]
+                        },
+                        "type": "ParseJson",
+                        "inputs": {
+                            "content": "@body('HTTP')",
+                            "schema": {
+                                "properties": {
+                                    "as": {
+                                        "type": "string"
+                                    },
+                                    "city": {
+                                        "type": "string"
+                                    },
+                                    "country": {
+                                        "type": "string"
+                                    },
+                                    "countryCode": {
+                                        "type": "string"
+                                    },
+                                    "isp": {
+                                        "type": "string"
+                                    },
+                                    "lat": {
+                                        "type": "number"
+                                    },
+                                    "lon": {
+                                        "type": "number"
+                                    },
+                                    "org": {
+                                        "type": "string"
+                                    },
+                                    "query": {
+                                        "type": "string"
+                                    },
+                                    "region": {
+                                        "type": "string"
+                                    },
+                                    "regionName": {
+                                        "type": "string"
+                                    },
+                                    "status": {
+                                        "type": "string"
+                                    },
+                                    "timezone": {
+                                        "type": "string"
+                                    },
+                                    "zip": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    },
+                    "Update_incident": {
+                        "runAfter": {
+                            "Create_HTML_table": [
+                                "Succeeded"
+                            ]
+                        },
+                        "type": "ApiConnection",
+                        "inputs": {
+                            "body": {
+                                "incidentArmId": "@triggerBody()?['object']?['id']",
+                                "tagsToAdd": {
+                                    "TagsToAdd": [
+                                        {
+                                            "Tag": "@body('Parse_JSON')?['city']"
+                                        },
+                                        {
+                                            "Tag": "@body('Parse_JSON')?['regionName']"
+                                        },
+                                        {
+                                            "Tag": "@body('Parse_JSON')?['country']"
+                                        }
+                                    ]
+                                }
+                            },
+                            "host": {
+                                "connection": {
+                                    "name": "@parameters('$connections')['azuresentinel']['connectionId']"
+                                }
+                            },
+                            "method": "put",
+                            "path": "/Incidents"
+                        }
+                    }
+                },
+                "runAfter": {
+                    "Filter_array": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "Foreach"
+            }
+        },
+    "outputs": {}
+},
+"parameters": {
+    "$connections": {
+        "value": {
+            "azuresentinel": {
+                "connectionId": "[resourceId('Microsoft.Web/connections', variables('MicrosoftSentinelConnectionName'))]",
+                "connectionName": "[variables('MicrosoftSentinelConnectionName')]",
+                "id": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/Azuresentinel')]"
+            },
+            "virustotal_1": {
+                "connectionId": "[resourceId('Microsoft.Web/connections', variables('VirustotalConnectionName'))]",
+                "connectionName": "[variables('VirustotalConnectionName')]",
+                "id": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/Virustotal')]"
+            }
+        }
+    }
+}
+},
+"name": "[parameters('PlaybookName')]",
+"type": "Microsoft.Logic/workflows",
+"location": "[resourceGroup().location]",
+"apiVersion": "2017-07-01",
+"dependsOn": [
+"[resourceId('Microsoft.Web/connections', variables('MicrosoftSentinelConnectionName'))]",
+"[resourceId('Microsoft.Web/connections', variables('VirustotalConnectionName'))]"
+]
+},
+{
+"type": "Microsoft.Web/connections",
+"apiVersion": "2016-06-01",
+"name": "[variables('MicrosoftSentinelConnectionName')]",
+"location": "[resourceGroup().location]",
+"kind": "V1",
+"properties": {
+"displayName": "[variables('MicrosoftSentinelConnectionName')]",
+"customParameterValues": {},
+"api": {
+"id": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/Azuresentinel')]"
+}
+}
+},
+{
+"type": "Microsoft.Web/connections",
+"apiVersion": "2016-06-01",
+"name": "[variables('VirustotalConnectionName')]",
+"location": "[resourceGroup().location]",
+"kind": "V1",
+"properties": {
+"displayName": "[variables('VirustotalConnectionName')]",
+"customParameterValues": {},
+"api": {
+"id": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/Virustotal')]"
+}
+}
+}
+]
+}
