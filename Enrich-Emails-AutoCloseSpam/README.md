@@ -16,4 +16,5 @@ This playbook exclusively uses the incident trigger so it must be run using an a
 
 ## Deploy
 Must be attached to an automation rule for it to ve 
+
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/)
